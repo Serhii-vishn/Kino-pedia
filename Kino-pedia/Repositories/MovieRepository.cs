@@ -56,20 +56,22 @@ public class MovieRepository : IMovieRepository
         string sparqlQuery = $@"
                 PREFIX dbo: <http://dbpedia.org/ontology/>
                 PREFIX dbr: <http://dbpedia.org/resource/>
-                SELECT DISTINCT ?movie ?plainTitle ?releaseDateStr ?imageStr ?actor WHERE {{
+                 SELECT DISTINCT ?movie ?plainTitle ?releaseDateStr ?imageStr (GROUP_CONCAT(DISTINCT ?actorName; separator="", "") AS ?actors) WHERE {{
                     ?movie a dbo:Film ;
                            rdfs:label ?title ;
                            dbo:releaseDate ?releaseDate ;
                            dbo:thumbnail ?image ;
                            dbo:starring ?actor .
+                    ?actor rdfs:label ?actorName .
                     FILTER (lang(?title) = 'en')
+                    FILTER (lang(?actorName) = 'en')
                     FILTER (BOUND(?image))
-                    FILTER (BOUND(?actor))  # Ensure that the actor is bound
                     BIND(STR(?title) AS ?plainTitle)
                     BIND(STR(?releaseDate) AS ?releaseDateStr)
                     BIND(STR(?image) AS ?imageStr)
                 }}
-                ORDER BY DESC(?releaseDate)
+                GROUP BY ?movie ?plainTitle ?releaseDateStr ?imageStr
+                ORDER BY DESC(?releaseDateStr )
                 LIMIT {limit_movies}";
 
         var movies = await _sparqlDAL.ExecuteQueryAsync(sparqlQuery, result => new Movie
